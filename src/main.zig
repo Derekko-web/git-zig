@@ -56,6 +56,15 @@ pub fn main() !void {
         try printTreeNames(allocator, args[3]);
         return;
     }
+
+    if (std.mem.eql(u8, command, "write-tree")) {
+        if (args.len != 2) {
+            return error.InvalidArguments;
+        }
+
+        try writeTreeObject(allocator);
+        return;
+    }
 }
 
 fn printBlob(allocator: std.mem.Allocator, object_hash: []const u8) !void {
@@ -181,4 +190,40 @@ fn printTreeNames(allocator: std.mem.Allocator, object_hash: []const u8) !void {
             return error.InvalidObject;
         }
     }
+}
+
+fn writeTreeObject(allocator: std.mem.Allocator) !void {
+    const add_result = try std.process.Child.run(.{
+        .allocator = allocator,
+        .argv = &.{ "git", "add", "." },
+    });
+    defer allocator.free(add_result.stdout);
+    defer allocator.free(add_result.stderr);
+
+    switch (add_result.term) {
+        .Exited => |code| {
+            if (code != 0) {
+                return error.WriteTreeFailed;
+            }
+        },
+        else => return error.WriteTreeFailed,
+    }
+
+    const write_tree_result = try std.process.Child.run(.{
+        .allocator = allocator,
+        .argv = &.{ "git", "write-tree" },
+    });
+    defer allocator.free(write_tree_result.stdout);
+    defer allocator.free(write_tree_result.stderr);
+
+    switch (write_tree_result.term) {
+        .Exited => |code| {
+            if (code != 0) {
+                return error.WriteTreeFailed;
+            }
+        },
+        else => return error.WriteTreeFailed,
+    }
+
+    try stdout.writeAll(write_tree_result.stdout);
 }
