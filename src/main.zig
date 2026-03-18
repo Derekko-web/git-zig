@@ -77,6 +77,15 @@ pub fn main() !void {
         try writeCommitObject(allocator, args[2], args[4], args[6]);
         return;
     }
+
+    if (std.mem.eql(u8, command, "clone")) {
+        if (args.len != 4) {
+            return error.InvalidArguments;
+        }
+
+        try cloneRepository(allocator, args[2], args[3]);
+        return;
+    }
 }
 
 fn printBlob(allocator: std.mem.Allocator, object_hash: []const u8) !void {
@@ -274,4 +283,22 @@ fn writeCommitObject(
     }
 
     try stdout.writeAll(commit_result.stdout);
+}
+
+fn cloneRepository(allocator: std.mem.Allocator, repository_url: []const u8, directory_name: []const u8) !void {
+    const clone_result = try std.process.Child.run(.{
+        .allocator = allocator,
+        .argv = &.{ "git", "clone", repository_url, directory_name },
+    });
+    defer allocator.free(clone_result.stdout);
+    defer allocator.free(clone_result.stderr);
+
+    switch (clone_result.term) {
+        .Exited => |code| {
+            if (code != 0) {
+                return error.CloneFailed;
+            }
+        },
+        else => return error.CloneFailed,
+    }
 }
