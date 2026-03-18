@@ -9,6 +9,8 @@ pub fn build(b: *std.Build) void {
             .target = b.graph.host,
         }),
     });
+    exe.linkLibC();
+    exe.linkSystemLibrary("z");
 
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
