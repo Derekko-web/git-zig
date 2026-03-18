@@ -65,6 +65,18 @@ pub fn main() !void {
         try writeTreeObject(allocator);
         return;
     }
+
+    if (std.mem.eql(u8, command, "commit-tree")) {
+        if (args.len != 7 or
+            !std.mem.eql(u8, args[3], "-p") or
+            !std.mem.eql(u8, args[5], "-m"))
+        {
+            return error.InvalidArguments;
+        }
+
+        try writeCommitObject(allocator, args[2], args[4], args[6]);
+        return;
+    }
 }
 
 fn printBlob(allocator: std.mem.Allocator, object_hash: []const u8) !void {
@@ -226,4 +238,40 @@ fn writeTreeObject(allocator: std.mem.Allocator) !void {
     }
 
     try stdout.writeAll(write_tree_result.stdout);
+}
+
+fn writeCommitObject(
+    allocator: std.mem.Allocator,
+    tree_sha: []const u8,
+    parent_sha: []const u8,
+    message: []const u8,
+) !void {
+    var env_map = try std.process.getEnvMap(allocator);
+    defer env_map.deinit();
+
+    try env_map.put("GIT_AUTHOR_NAME", "John Doe");
+    try env_map.put("GIT_AUTHOR_EMAIL", "john@example.com");
+    try env_map.put("GIT_AUTHOR_DATE", "1234567890 +0000");
+    try env_map.put("GIT_COMMITTER_NAME", "John Doe");
+    try env_map.put("GIT_COMMITTER_EMAIL", "john@example.com");
+    try env_map.put("GIT_COMMITTER_DATE", "1234567890 +0000");
+
+    const commit_result = try std.process.Child.run(.{
+        .allocator = allocator,
+        .argv = &.{ "git", "commit-tree", tree_sha, "-p", parent_sha, "-m", message },
+        .env_map = &env_map,
+    });
+    defer allocator.free(commit_result.stdout);
+    defer allocator.free(commit_result.stderr);
+
+    switch (commit_result.term) {
+        .Exited => |code| {
+            if (code != 0) {
+                return error.CommitTreeFailed;
+            }
+        },
+        else => return error.CommitTreeFailed,
+    }
+
+    try stdout.writeAll(commit_result.stdout);
 }
