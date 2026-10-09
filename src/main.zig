@@ -313,8 +313,8 @@ const Repository = struct {
 
         try body.writer(self.allocator).print("tree {s}\n", .{tree_sha});
         try body.writer(self.allocator).print("parent {s}\n", .{parent_sha});
-        try body.appendSlice(self.allocator, "author John Doe <john@example.com> 1234567890 +0000\n");
-        try body.appendSlice(self.allocator, "committer John Doe <john@example.com> 1234567890 +0000\n\n");
+        try body.appendSlice(self.allocator, "author Derek Ko <80466973+Derekko-web@users.noreply.github.com> 1234567890 +0000\n");
+        try body.appendSlice(self.allocator, "committer Derek Ko <80466973+Derekko-web@users.noreply.github.com> 1234567890 +0000\n\n");
         try body.appendSlice(self.allocator, message);
         if (message.len == 0 or message[message.len - 1] != '\n') {
             try body.append(self.allocator, '\n');
